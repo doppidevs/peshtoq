@@ -19,7 +19,7 @@ internal static class AppPaths
 
 internal sealed class Settings
 {
-    public bool SideTabs { get; set; }
+    public bool SideTabs { get; set; } = true;
 
     private static string FilePath => Path.Combine(AppPaths.DataDir, "settings.json");
 
