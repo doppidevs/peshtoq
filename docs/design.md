@@ -23,8 +23,9 @@
 |---|---|
 | Header (AppBar) | 34 px |
 | Pill (yopiq) | 230 × 26, radius 13 |
-| Panel (ochiq, tablar tepada) | 600 × 330, radius 22 |
-| Panel (ochiq, tablar chapda) | 680 × 330, radius 22 |
+| Panel (ochiq) | radius 22, balandlik kontentga mos: min 170, max 420 px |
+| Kenglik: Media / Eslatmalar / Clipboard / Tizim | 500 / 540 / 620 / 600 px |
+| Tablar chapda | kenglik +80 px, chap ustun 136 px |
 | Fon | Acrylic, blur 18 px |
 
 ## Variantlar

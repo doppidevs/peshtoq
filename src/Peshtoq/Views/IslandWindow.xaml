@@ -1,0 +1,269 @@
+<Window x:Class="Peshtoq.Views.IslandWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Peshtoq Island"
+        Width="760" Height="470"
+        WindowStyle="None" AllowsTransparency="True" Background="Transparent"
+        ResizeMode="NoResize" ShowInTaskbar="False" Topmost="True"
+        FontFamily="{StaticResource UiFont}" FontSize="13"
+        Foreground="{StaticResource FgBrush}"
+        TextOptions.TextFormattingMode="Display"
+        KeyDown="Window_KeyDown">
+
+    <!-- The window is a large transparent canvas; fully transparent pixels let clicks pass through.
+         Only the Shell border is visible and grows from a pill into the panel. -->
+    <Border x:Name="Shell"
+            HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,4,0,0"
+            Width="230" Height="26" CornerRadius="13"
+            Background="{StaticResource IslandBrush}"
+            BorderBrush="{StaticResource LineBrush}" BorderThickness="1"
+            MouseLeftButtonUp="Shell_MouseLeftButtonUp"
+            PreviewMouseWheel="Shell_PreviewMouseWheel">
+        <Border.Effect>
+            <DropShadowEffect x:Name="Shadow" BlurRadius="36" ShadowDepth="10" Direction="270" Opacity="0" Color="Black" />
+        </Border.Effect>
+
+        <Grid>
+            <!-- collapsed pill -->
+            <Grid x:Name="Mini" Margin="5,0,10,0" Cursor="Hand">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <Border x:Name="MiniCover" Width="16" Height="16" CornerRadius="4" VerticalAlignment="Center"
+                        Background="{StaticResource CoverFallback}" />
+                <TextBlock x:Name="MiniTitle" Grid.Column="1" Margin="8,0" VerticalAlignment="Center"
+                           FontSize="12" FontWeight="Medium" TextTrimming="CharacterEllipsis" />
+                <StackPanel x:Name="Eq" Grid.Column="2" Orientation="Horizontal" Height="12" VerticalAlignment="Center">
+                    <Rectangle Width="2.5" Height="3" Margin="0,0,2,0" RadiusX="1" RadiusY="1" Fill="{StaticResource OkBrush}" VerticalAlignment="Bottom" />
+                    <Rectangle Width="2.5" Height="3" Margin="0,0,2,0" RadiusX="1" RadiusY="1" Fill="{StaticResource OkBrush}" VerticalAlignment="Bottom" />
+                    <Rectangle Width="2.5" Height="3" Margin="0,0,2,0" RadiusX="1" RadiusY="1" Fill="{StaticResource OkBrush}" VerticalAlignment="Bottom" />
+                    <Rectangle Width="2.5" Height="3" RadiusX="1" RadiusY="1" Fill="{StaticResource OkBrush}" VerticalAlignment="Bottom" />
+                </StackPanel>
+            </Grid>
+
+            <!-- expanded panel -->
+            <Grid x:Name="Full" Opacity="0" IsHitTestVisible="False" Margin="16,14,16,16">
+                <Grid.RenderTransform>
+                    <TranslateTransform x:Name="FullShift" />
+                </Grid.RenderTransform>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <Border x:Name="TabsHost" BorderBrush="{StaticResource LineBrush}">
+                    <StackPanel x:Name="Tabs" />
+                </Border>
+
+                <Grid x:Name="Panes" Grid.Row="1" ClipToBounds="True">
+
+                    <!-- MEDIA -->
+                    <ScrollViewer x:Name="MediaPane" VerticalScrollBarVisibility="Hidden">
+                        <Grid>
+                            <Grid x:Name="MediaHas">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="112" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Border x:Name="Cover" Width="112" Height="112" CornerRadius="14"
+                                        Background="{StaticResource CoverFallback}" VerticalAlignment="Center" />
+                                <StackPanel Grid.Column="1" Margin="16,0,0,0" VerticalAlignment="Center">
+                                    <TextBlock x:Name="MediaTitle" FontSize="17" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock x:Name="MediaArtist" Foreground="{StaticResource MutedBrush}" Margin="0,2,0,0"
+                                               TextTrimming="CharacterEllipsis" />
+                                    <Grid x:Name="ProgressTrackHost" Margin="0,12,0,0" Height="10" Background="Transparent"
+                                          Cursor="Hand" MouseLeftButtonDown="Progress_MouseLeftButtonDown">
+                                        <Border x:Name="ProgressTrack" Height="4" CornerRadius="2" Background="{StaticResource TrackBrush}" />
+                                        <Border x:Name="ProgressFill" Height="4" CornerRadius="2" Background="{StaticResource FgBrush}"
+                                                HorizontalAlignment="Left" Width="0" />
+                                    </Grid>
+                                    <Grid x:Name="TimesRow" Margin="0,2,0,0">
+                                        <TextBlock x:Name="TimeCurrent" FontFamily="{StaticResource MonoFont}" FontSize="11"
+                                                   Foreground="{StaticResource MutedBrush}" />
+                                        <TextBlock x:Name="TimeTotal" FontFamily="{StaticResource MonoFont}" FontSize="11"
+                                                   Foreground="{StaticResource MutedBrush}" HorizontalAlignment="Right" />
+                                    </Grid>
+                                    <Grid Margin="0,6,0,0">
+                                        <StackPanel Orientation="Horizontal">
+                                            <Button Style="{StaticResource RoundButton}" ToolTip="Oldingi" Click="Prev_Click">
+                                                <TextBlock Text="&#xE892;" FontFamily="{StaticResource IconFont}" FontSize="15" />
+                                            </Button>
+                                            <Button Style="{StaticResource RoundButton}" Tag="play" Width="40" Height="40" Margin="10,0"
+                                                    Background="{StaticResource FgBrush}" Foreground="#111111" ToolTip="Ijro / pauza"
+                                                    Click="PlayPause_Click">
+                                                <TextBlock x:Name="PlayIcon" Text="&#xE768;" FontFamily="{StaticResource IconFont}" FontSize="16" />
+                                            </Button>
+                                            <Button Style="{StaticResource RoundButton}" ToolTip="Keyingi" Click="Next_Click">
+                                                <TextBlock Text="&#xE893;" FontFamily="{StaticResource IconFont}" FontSize="15" />
+                                            </Button>
+                                        </StackPanel>
+                                        <Button x:Name="SourceButton" Style="{StaticResource ChipButton}" HorizontalAlignment="Right"
+                                                ToolTip="Boshqa manbaga o'tish" Click="Source_Click">
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock x:Name="SourceText" />
+                                                <TextBlock Text="&#xE8AB;" FontFamily="{StaticResource IconFont}" FontSize="11" Margin="6,1,0,0" />
+                                            </StackPanel>
+                                        </Button>
+                                    </Grid>
+                                </StackPanel>
+                            </Grid>
+                            <StackPanel x:Name="MediaEmpty" Visibility="Collapsed" Margin="4,10">
+                                <TextBlock Text="Hech narsa chalinmayapti" FontSize="15" FontWeight="SemiBold" />
+                                <TextBlock Foreground="{StaticResource MutedBrush}" Margin="0,4,0,0" TextWrapping="Wrap"
+                                           Text="Spotify, YouTube yoki boshqa pleyerda musiqa qo'ying: u shu yerda paydo bo'ladi." />
+                            </StackPanel>
+                        </Grid>
+                    </ScrollViewer>
+
+                    <!-- NOTES -->
+                    <ScrollViewer x:Name="NotesPane" VerticalScrollBarVisibility="Hidden" Visibility="Collapsed">
+                        <StackPanel>
+                            <ItemsControl x:Name="NotesList">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border x:Name="Card" Background="{StaticResource CardBrush}" CornerRadius="12"
+                                                Padding="12,9" Margin="0,0,0,6">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto" />
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+                                                <CheckBox Style="{StaticResource NoteCheck}" IsChecked="{Binding Done, Mode=TwoWay}"
+                                                          VerticalAlignment="Center" />
+                                                <TextBlock x:Name="Text" Grid.Column="1" Margin="10,0" Text="{Binding Text}"
+                                                           TextWrapping="Wrap" VerticalAlignment="Center" />
+                                                <Button x:Name="Delete" Grid.Column="2" Style="{StaticResource HeaderButton}"
+                                                        Height="20" Padding="5,0" Opacity="0" ToolTip="O'chirish"
+                                                        Click="DeleteNote_Click">
+                                                    <TextBlock Text="&#xE711;" FontFamily="{StaticResource IconFont}" FontSize="10"
+                                                               Foreground="{StaticResource MutedBrush}" />
+                                                </Button>
+                                            </Grid>
+                                        </Border>
+                                        <DataTemplate.Triggers>
+                                            <DataTrigger Binding="{Binding Done}" Value="True">
+                                                <Setter TargetName="Text" Property="Foreground" Value="{StaticResource MutedBrush}" />
+                                                <Setter TargetName="Text" Property="TextDecorations" Value="Strikethrough" />
+                                            </DataTrigger>
+                                            <Trigger SourceName="Card" Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="Delete" Property="Opacity" Value="1" />
+                                            </Trigger>
+                                        </DataTemplate.Triggers>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <Border Background="{StaticResource CardBrush}" CornerRadius="12" Padding="12,9"
+                                    BorderBrush="{StaticResource LineBrush}" BorderThickness="1">
+                                <Grid>
+                                    <TextBlock x:Name="NewNotePlaceholder" Text="Yangi eslatma… (Enter)"
+                                               Foreground="{StaticResource MutedBrush}" IsHitTestVisible="False" Margin="2,0,0,0" />
+                                    <TextBox x:Name="NewNote" Style="{StaticResource BareTextBox}"
+                                             KeyDown="NewNote_KeyDown" TextChanged="NewNote_TextChanged" />
+                                </Grid>
+                            </Border>
+                        </StackPanel>
+                    </ScrollViewer>
+
+                    <!-- CLIPBOARD -->
+                    <ScrollViewer x:Name="ClipPane" VerticalScrollBarVisibility="Hidden" Visibility="Collapsed">
+                        <StackPanel>
+                            <TextBlock x:Name="ClipEmpty" Foreground="{StaticResource MutedBrush}" Margin="4,8" TextWrapping="Wrap"
+                                       Text="Hali hech narsa nusxalanmagan. Ctrl+C bilan nusxalangan matnlar shu yerda yig'iladi." />
+                            <ItemsControl x:Name="ClipList">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <UniformGrid Columns="2" />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Button Style="{StaticResource CardButton}" Margin="0,0,8,8" Click="ClipItem_Click"
+                                                ToolTip="Bosing: qayta nusxalanadi">
+                                            <StackPanel>
+                                                <TextBlock Text="{Binding Meta}" FontSize="10.5" Foreground="{StaticResource MutedBrush}" />
+                                                <StackPanel Orientation="Horizontal" Margin="0,3,0,0">
+                                                    <Border Width="10" Height="10" CornerRadius="3" Margin="0,0,6,0"
+                                                            Background="{Binding Swatch}">
+                                                        <Border.Style>
+                                                            <Style TargetType="Border">
+                                                                <Setter Property="Visibility" Value="Collapsed" />
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding HasSwatch}" Value="True">
+                                                                        <Setter Property="Visibility" Value="Visible" />
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </Border.Style>
+                                                    </Border>
+                                                    <TextBlock Text="{Binding Preview}" FontFamily="{StaticResource MonoFont}" FontSize="11.5"
+                                                               TextTrimming="CharacterEllipsis" MaxWidth="250" />
+                                                </StackPanel>
+                                            </StackPanel>
+                                        </Button>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <TextBlock x:Name="ClipToast" Text="Nusxalandi" Foreground="{StaticResource OkBrush}" FontSize="11.5"
+                                       Margin="4,0,0,0" Opacity="0" />
+                        </StackPanel>
+                    </ScrollViewer>
+
+                    <!-- SYSTEM -->
+                    <ScrollViewer x:Name="SysPane" VerticalScrollBarVisibility="Hidden" Visibility="Collapsed">
+                        <StackPanel>
+                            <UniformGrid Columns="3">
+                                <Border Background="{StaticResource CardBrush}" CornerRadius="14" Padding="12" Margin="0,0,8,0">
+                                    <StackPanel>
+                                        <TextBlock Text="CPU" FontSize="11" Foreground="{StaticResource MutedBrush}" />
+                                        <TextBlock x:Name="CpuText" FontSize="22" FontWeight="Bold" Margin="0,2,0,8" />
+                                        <Grid Height="5">
+                                            <Border CornerRadius="3" Background="{StaticResource TrackBrush}" />
+                                            <Border x:Name="CpuBar" CornerRadius="3" Background="{StaticResource AccentBrush}"
+                                                    RenderTransformOrigin="0,0.5">
+                                                <Border.RenderTransform><ScaleTransform ScaleX="0" /></Border.RenderTransform>
+                                            </Border>
+                                        </Grid>
+                                    </StackPanel>
+                                </Border>
+                                <Border Background="{StaticResource CardBrush}" CornerRadius="14" Padding="12" Margin="0,0,8,0">
+                                    <StackPanel>
+                                        <TextBlock Text="RAM" FontSize="11" Foreground="{StaticResource MutedBrush}" />
+                                        <TextBlock x:Name="RamText" FontSize="22" FontWeight="Bold" Margin="0,2,0,8" />
+                                        <Grid Height="5">
+                                            <Border CornerRadius="3" Background="{StaticResource TrackBrush}" />
+                                            <Border x:Name="RamBar" CornerRadius="3" Background="{StaticResource WarnBrush}"
+                                                    RenderTransformOrigin="0,0.5">
+                                                <Border.RenderTransform><ScaleTransform ScaleX="0" /></Border.RenderTransform>
+                                            </Border>
+                                        </Grid>
+                                    </StackPanel>
+                                </Border>
+                                <Border Background="{StaticResource CardBrush}" CornerRadius="14" Padding="12">
+                                    <StackPanel>
+                                        <TextBlock Text="BATAREYA" FontSize="11" Foreground="{StaticResource MutedBrush}" />
+                                        <TextBlock x:Name="BattText" FontSize="22" FontWeight="Bold" Margin="0,2,0,8" />
+                                        <Grid Height="5">
+                                            <Border CornerRadius="3" Background="{StaticResource TrackBrush}" />
+                                            <Border x:Name="BattBar" CornerRadius="3" Background="{StaticResource OkBrush}"
+                                                    RenderTransformOrigin="0,0.5">
+                                                <Border.RenderTransform><ScaleTransform ScaleX="0" /></Border.RenderTransform>
+                                            </Border>
+                                        </Grid>
+                                    </StackPanel>
+                                </Border>
+                            </UniformGrid>
+                            <TextBlock x:Name="UptimeText" Foreground="{StaticResource MutedBrush}" FontSize="11.5" Margin="4,10,0,0" />
+                        </StackPanel>
+                    </ScrollViewer>
+                </Grid>
+            </Grid>
+        </Grid>
+    </Border>
+</Window>
