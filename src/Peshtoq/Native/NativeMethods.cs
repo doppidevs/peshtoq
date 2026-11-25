@@ -67,6 +67,11 @@ internal static class NativeMethods
     public const uint KEYEVENTF_KEYUP = 0x0002;
     public const uint PROCESS_QUERY_LIMITED_INFORMATION = 0x1000;
 
+    public const int DWMWA_USE_IMMERSIVE_DARK_MODE = 20;
+
+    [DllImport("dwmapi.dll")]
+    public static extern int DwmSetWindowAttribute(IntPtr hwnd, int attribute, ref int value, int size);
+
     [DllImport("shell32.dll")]
     public static extern UIntPtr SHAppBarMessage(uint dwMessage, ref APPBARDATA pData);
 

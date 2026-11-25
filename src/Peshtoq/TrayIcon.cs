@@ -11,27 +11,24 @@ internal sealed class TrayIcon : IDisposable
     private readonly WF.NotifyIcon _icon;
     private readonly Icon _image;
 
-    public TrayIcon(bool sideTabs, Action<bool> onSideTabsChanged, Action onExit)
+    public TrayIcon(Action onSettings, Action onExit)
     {
         _image = DrawIcon();
 
-        var side = new WF.ToolStripMenuItem("Tablar chapda") { CheckOnClick = true, Checked = sideTabs };
-        side.CheckedChanged += (_, _) => onSideTabsChanged(side.Checked);
-
-        var startup = new WF.ToolStripMenuItem("Windows bilan ishga tushirish") { CheckOnClick = true, Checked = StartupManager.IsEnabled };
-        startup.CheckedChanged += (_, _) => StartupManager.Set(startup.Checked);
+        var settings = new WF.ToolStripMenuItem("Sozlamalar…");
+        settings.Click += (_, _) => onSettings();
 
         var exit = new WF.ToolStripMenuItem("Chiqish");
         exit.Click += (_, _) => onExit();
 
         var menu = new WF.ContextMenuStrip();
-        menu.Items.Add(new WF.ToolStripLabel("Peshtoq 0.1") { ForeColor = Color.Gray });
+        menu.Items.Add(new WF.ToolStripLabel("Peshtoq 0.2") { ForeColor = Color.Gray });
         menu.Items.Add(new WF.ToolStripSeparator());
-        menu.Items.Add(side);
-        menu.Items.Add(startup);
+        menu.Items.Add(settings);
         menu.Items.Add(new WF.ToolStripSeparator());
         menu.Items.Add(exit);
 
+        // Open settings on a left double-click too.
         _icon = new WF.NotifyIcon
         {
             Icon = _image,
@@ -39,6 +36,7 @@ internal sealed class TrayIcon : IDisposable
             ContextMenuStrip = menu,
             Visible = true,
         };
+        _icon.DoubleClick += (_, _) => onSettings();
     }
 
     /// <summary>A dark rounded square with a white pill: the island in miniature.</summary>

@@ -24,9 +24,12 @@ Windows uchun doimiy yuqori panel (AppBar) va tepadan tushadigan multi-tasking p
 
 - G'ildirak bilan tablar almashadi
 - Panel o'lchami har bir tabning kontentiga moslashadi (balandlik 170–420 px)
-- Tablar tepada yoki chapda (tray menyusidan)
+- Tablar tepada yoki chapda
+- Faol tab ikonkasi accent rangда
 
-**Tray menyusi:** tablar joylashuvi, Windows bilan ishga tushirish, chiqish.
+**Sozlamalar oynasi** (tray menyusi yoki ikonaga ikki marta bosish): tablar joylashuvi, trigger kengligi, ochilish tezligi, accent rang, qaysi tablar ko'rinishi, Windows bilan ishga tushirish. O'zgarishlar jonli qo'llanadi.
+
+**Tray menyusi:** Sozlamalar, chiqish.
 
 ## Texnologiya
 
@@ -52,7 +55,6 @@ dotnet publish src/Peshtoq -c Release -r win-x64 --self-contained false -p:Publi
 
 - Windows bildirishnomalarini header'da ko'rsatish (`UserNotificationListener`)
 - Bir nechta monitor
-- Acrylic/Mica fon
-- Sozlamalar oynasi
+- Island'ga haqiqiy acrylic (oynani shaklga moslash)
 
 Dizayn va animatsiya parametrlari: [docs/design.md](docs/design.md).

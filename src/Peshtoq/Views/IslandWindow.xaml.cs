@@ -53,6 +53,8 @@ public partial class IslandWindow : Window
     private Tab _current = Tab.Media;
     private bool _open, _side;
     private long _zoneSince = -1, _zoneExitAt = -1, _leftSince = -1, _lastWheel;
+    private double _triggerHalf = TriggerHalfWidth; // live from settings
+    private int _openDwell = OpenDwellMs;           // live from settings
     private int _seconds;
 
     public IslandWindow()
@@ -69,7 +71,8 @@ public partial class IslandWindow : Window
         foreach (var pane in _panes.Values) pane.RenderTransform = new TranslateTransform();
 
         BuildTabs();
-        SetSideTabs(Settings.Current.SideTabs);
+        ApplySettings();
+        Settings.Changed += OnSettingsChanged;
 
         _notes.Load();
         NotesList.ItemsSource = _notes.Items;
@@ -202,6 +205,51 @@ public partial class IslandWindow : Window
             icon.Foreground = id == _current ? accent : muted;
     }
 
+    private static bool IsTabOn(Tab tab) => tab switch
+    {
+        Tab.Media => Settings.Current.ShowMedia,
+        Tab.Notes => Settings.Current.ShowNotes,
+        Tab.Clip => Settings.Current.ShowClip,
+        Tab.Sys => Settings.Current.ShowSys,
+        _ => true,
+    };
+
+    private void OnSettingsChanged() => Dispatcher.Invoke(ApplySettings);
+
+    /// <summary>Re-read settings and apply them live: accent, trigger, dwell, visible tabs, layout.</summary>
+    public void ApplySettings()
+    {
+        var s = Settings.Current;
+        _triggerHalf = s.TriggerWidth;
+        _openDwell = s.OpenDwellMs;
+        SetAccent(s.Accent);
+
+        foreach (var def in Defs)
+            _tabButtons[def.Id].Visibility = IsTabOn(def.Id) ? Visibility.Visible : Visibility.Collapsed;
+        if (!IsTabOn(_current))
+        {
+            var first = Defs.FirstOrDefault(d => IsTabOn(d.Id));
+            if (first is not null) SetTab(first.Id);
+        }
+
+        SetSideTabs(s.SideTabs); // also re-applies size when open
+    }
+
+    /// <summary>Mutate the shared accent brush so everything using it updates at once.</summary>
+    private static void SetAccent(string hex)
+    {
+        try
+        {
+            var color = (Color)ColorConverter.ConvertFromString(hex);
+            if (Application.Current.Resources["AccentBrush"] is SolidColorBrush { IsFrozen: false } brush)
+                brush.Color = color;
+        }
+        catch
+        {
+            // a bad colour string just leaves the current accent in place
+        }
+    }
+
     private void SetTab(Tab tab)
     {
         _current = tab;
@@ -232,7 +280,7 @@ public partial class IslandWindow : Window
         double scale = GetDpiForWindow(_hwnd) / 96.0;
         int screenWidth = GetSystemMetrics(SM_CXSCREEN);
 
-        bool inZone = p.Y <= TriggerHeight * scale && Math.Abs(p.X - screenWidth / 2.0) <= TriggerHalfWidth * scale;
+        bool inZone = p.Y <= TriggerHeight * scale && Math.Abs(p.X - screenWidth / 2.0) <= _triggerHalf * scale;
         Rect shell = ShellScreenRect();
         shell.Inflate(6 * scale, 6 * scale);
         bool overShell = shell.Contains(p.X, p.Y);
@@ -244,7 +292,7 @@ public partial class IslandWindow : Window
             {
                 _zoneExitAt = -1;
                 if (_zoneSince < 0) _zoneSince = now;
-                if (now - _zoneSince >= OpenDwellMs) Expand();
+                if (now - _zoneSince >= _openDwell) Expand();
             }
             else
             {
@@ -384,9 +432,10 @@ public partial class IslandWindow : Window
         if (now - _lastWheel < WheelThrottleMs) return;
         _lastWheel = now;
 
-        int i = Array.FindIndex(Defs, d => d.Id == _current);
-        int next = Math.Clamp(i + (down ? 1 : -1), 0, Defs.Length - 1);
-        if (next != i) SetTab(Defs[next].Id);
+        var order = Defs.Where(d => IsTabOn(d.Id)).ToList();
+        int i = order.FindIndex(d => d.Id == _current);
+        int next = Math.Clamp(i + (down ? 1 : -1), 0, order.Count - 1);
+        if (i >= 0 && next != i) SetTab(order[next].Id);
     }
 
     // ---------------------------------------------------------------- periodic
@@ -560,6 +609,7 @@ public partial class IslandWindow : Window
 
     public void Shutdown()
     {
+        Settings.Changed -= OnSettingsChanged;
         _poll.Stop();
         _second.Stop();
         _clipboard.Dispose();

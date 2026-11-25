@@ -11,6 +11,7 @@ public partial class App : Application
     private HeaderWindow? _header;
     private IslandWindow? _island;
     private TrayIcon? _tray;
+    private SettingsWindow? _settings;
 
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -43,15 +44,22 @@ public partial class App : Application
             else { _header.Show(); _island.Show(); }
         };
 
-        _tray = new TrayIcon(
-            sideTabs: Settings.Current.SideTabs,
-            onSideTabsChanged: side =>
-            {
-                Settings.Current.SideTabs = side;
-                Settings.Save();
-                _island.SetSideTabs(side);
-            },
-            onExit: Shutdown);
+        _tray = new TrayIcon(onSettings: ShowSettings, onExit: Shutdown);
+    }
+
+    private void ShowSettings()
+    {
+        if (_settings is null)
+        {
+            _settings = new SettingsWindow();
+            _settings.Closed += (_, _) => _settings = null;
+            _settings.Show();
+        }
+        else
+        {
+            if (_settings.WindowState == WindowState.Minimized) _settings.WindowState = WindowState.Normal;
+            _settings.Activate();
+        }
     }
 
     protected override void OnExit(ExitEventArgs e)
