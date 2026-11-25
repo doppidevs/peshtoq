@@ -189,13 +189,24 @@ public partial class IslandWindow : Window
             _tabIcons[id].Visibility = side ? Visibility.Visible : Visibility.Collapsed;
         }
 
+        ApplyTabIconColors();
         if (_open) ApplySize();
+    }
+
+    /// <summary>The active tab's icon takes the accent colour; the rest stay muted.</summary>
+    private void ApplyTabIconColors()
+    {
+        var accent = (Brush)FindResource("AccentBrush");
+        var muted = (Brush)FindResource("MutedBrush");
+        foreach (var (id, icon) in _tabIcons)
+            icon.Foreground = id == _current ? accent : muted;
     }
 
     private void SetTab(Tab tab)
     {
         _current = tab;
         _tabButtons[tab].IsChecked = true;
+        ApplyTabIconColors();
         foreach (var (id, pane) in _panes)
             pane.Visibility = id == tab ? Visibility.Visible : Visibility.Collapsed;
 
