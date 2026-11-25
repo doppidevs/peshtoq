@@ -4,7 +4,7 @@
 | | |
 |---|---|
 | Trigger | y = 0, ekran markazidan ±150 px |
-| Kutish | 150 ms |
+| Kutish (dwell) | 90 ms + 60 ms grace |
 | Davomiyligi | 500 ms |
 | Easing | spring `cubic-bezier(.3, 1.35, .45, 1)` |
 | Kontent | +160 ms kechikib paydo bo'ladi |

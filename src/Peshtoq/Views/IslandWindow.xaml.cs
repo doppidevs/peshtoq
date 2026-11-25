@@ -32,7 +32,10 @@ public partial class IslandWindow : Window
     private const double MinHeight_ = 170, MaxHeight_ = 420;
     private const double SideExtraWidth = 80, SideRailWidth = 136;
     private const double TriggerHalfWidth = 150;
-    private const int OpenDwellMs = 150, CloseDelayMs = 350, WheelThrottleMs = 250;
+    private const int TriggerHeight = 2; // physical px from the top edge that count as the trigger
+    // Dwell keeps a stray sweep across the top from opening; the grace bridges a single missed poll
+    // during a fast flick, so the panel still opens when the cursor jumps straight to the edge.
+    private const int OpenDwellMs = 90, OpenGraceMs = 60, CloseDelayMs = 350, WheelThrottleMs = 250;
 
     private readonly Dictionary<Tab, RadioButton> _tabButtons = new();
     private readonly Dictionary<Tab, TextBlock> _tabIcons = new();
@@ -49,7 +52,7 @@ public partial class IslandWindow : Window
     private IntPtr _hwnd;
     private Tab _current = Tab.Media;
     private bool _open, _side;
-    private long _zoneSince = -1, _leftSince = -1, _lastWheel;
+    private long _zoneSince = -1, _zoneExitAt = -1, _leftSince = -1, _lastWheel;
     private int _seconds;
 
     public IslandWindow()
@@ -218,7 +221,7 @@ public partial class IslandWindow : Window
         double scale = GetDpiForWindow(_hwnd) / 96.0;
         int screenWidth = GetSystemMetrics(SM_CXSCREEN);
 
-        bool inZone = p.Y <= 1 && Math.Abs(p.X - screenWidth / 2.0) <= TriggerHalfWidth * scale;
+        bool inZone = p.Y <= TriggerHeight * scale && Math.Abs(p.X - screenWidth / 2.0) <= TriggerHalfWidth * scale;
         Rect shell = ShellScreenRect();
         shell.Inflate(6 * scale, 6 * scale);
         bool overShell = shell.Contains(p.X, p.Y);
@@ -228,10 +231,17 @@ public partial class IslandWindow : Window
         {
             if (inZone || overShell)
             {
+                _zoneExitAt = -1;
                 if (_zoneSince < 0) _zoneSince = now;
-                else if (now - _zoneSince >= OpenDwellMs) Expand();
+                if (now - _zoneSince >= OpenDwellMs) Expand();
             }
-            else _zoneSince = -1;
+            else
+            {
+                // Don't drop the dwell the instant a fast flick's cursor is sampled mid-air;
+                // only give up after a short grace out of the zone.
+                if (_zoneExitAt < 0) _zoneExitAt = now;
+                if (now - _zoneExitAt >= OpenGraceMs) _zoneSince = -1;
+            }
         }
         else
         {
@@ -259,7 +269,7 @@ public partial class IslandWindow : Window
     {
         if (_open) return;
         _open = true;
-        _zoneSince = _leftSince = -1;
+        _zoneSince = _zoneExitAt = _leftSince = -1;
 
         Shell.CornerRadius = new CornerRadius(22);
         Mini.IsHitTestVisible = false;
@@ -283,7 +293,7 @@ public partial class IslandWindow : Window
     {
         if (!_open) return;
         _open = false;
-        _zoneSince = _leftSince = -1;
+        _zoneSince = _zoneExitAt = _leftSince = -1;
 
         Full.IsHitTestVisible = false;
         Mini.IsHitTestVisible = true;
@@ -323,9 +333,11 @@ public partial class IslandWindow : Window
 
     private DoubleAnimation AnimateSize(double width, double height, bool opening)
     {
-        var duration = TimeSpan.FromMilliseconds(opening ? 500 : 260);
+        var duration = TimeSpan.FromMilliseconds(opening ? 460 : 240);
+        // Gentler overshoot than the content springs: a big size jump (e.g. Media -> Tizim) must not
+        // overshoot enough to clip its own content for a frame.
         IEasingFunction ease = opening
-            ? new BackEase { EasingMode = EasingMode.EaseOut, Amplitude = 0.3 }
+            ? new BackEase { EasingMode = EasingMode.EaseOut, Amplitude = 0.12 }
             : new CubicEase { EasingMode = EasingMode.EaseIn };
         var w = new DoubleAnimation(width, duration) { EasingFunction = ease };
         var h = new DoubleAnimation(height, duration) { EasingFunction = ease };
