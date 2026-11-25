@@ -9,7 +9,7 @@
         Foreground="{StaticResource FgBrush}"
         TextOptions.TextFormattingMode="Display">
 
-    <Border Background="{StaticResource HeaderBrush}" BorderBrush="{StaticResource LineBrush}" BorderThickness="0,0,0,1">
+    <Border x:Name="RootBorder" Background="{StaticResource HeaderBrush}" BorderBrush="{StaticResource LineBrush}" BorderThickness="0,0,0,1">
         <Grid Margin="6,0">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />

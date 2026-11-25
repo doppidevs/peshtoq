@@ -42,6 +42,12 @@ public partial class HeaderWindow : Window
     {
         _hwnd = new WindowInteropHelper(this).Handle;
         MakeToolWindow(_hwnd, noActivate: true);
+
+        // Acrylic fills the whole header window, so let the blur show: a transparent border on success,
+        // the solid fallback fill when the OS refuses it (older Windows).
+        if (Acrylic.Enable(this, System.Windows.Media.Color.FromArgb(0xB0, 0x10, 0x12, 0x18), bottomBorder: false))
+            RootBorder.Background = System.Windows.Media.Brushes.Transparent;
+
         _appBar = new AppBar(this, HeaderHeight);
         _appBar.FullscreenChanged += fs => FullscreenChanged?.Invoke(fs);
         _appBar.Register();
