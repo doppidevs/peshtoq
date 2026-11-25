@@ -28,7 +28,7 @@ public partial class IslandWindow : Window
     };
 
     // geometry and timing (see docs/design.md)
-    private const double PillWidth = 230, PillHeight = 26;
+    private const double PillWidth = 230, PillHeight = 30;
     private const double MinHeight_ = 170, MaxHeight_ = 420;
     private const double SideExtraWidth = 80, SideRailWidth = 136;
     private const double TriggerHalfWidth = 150;
@@ -302,7 +302,7 @@ public partial class IslandWindow : Window
         Shadow.BeginAnimation(System.Windows.Media.Effects.DropShadowEffect.OpacityProperty, new DoubleAnimation(0, TimeSpan.FromMilliseconds(200)));
 
         var width = AnimateSize(PillWidth, PillHeight, opening: false);
-        width.Completed += (_, _) => { if (!_open) Shell.CornerRadius = new CornerRadius(13); };
+        width.Completed += (_, _) => { if (!_open) Shell.CornerRadius = new CornerRadius(15); };
         Keyboard.ClearFocus();
     }
 
