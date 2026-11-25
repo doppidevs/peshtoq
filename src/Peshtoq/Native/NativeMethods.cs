@@ -64,6 +64,8 @@ internal static class NativeMethods
 
     public const int SM_CXSCREEN = 0;
     public const byte VK_LWIN = 0x5B;
+    public const byte VK_CONTROL = 0x11;
+    public const byte VK_ESCAPE = 0x1B;
     public const uint KEYEVENTF_KEYUP = 0x0002;
     public const uint PROCESS_QUERY_LIMITED_INFORMATION = 0x1000;
 

@@ -190,8 +190,11 @@ public partial class HeaderWindow : Window
 
     private void Launcher_Click(object sender, RoutedEventArgs e)
     {
-        keybd_event(VK_LWIN, 0, 0, UIntPtr.Zero);
-        keybd_event(VK_LWIN, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
+        // Ctrl+Esc opens the Start menu reliably; a lone synthetic Win keypress is often ignored.
+        keybd_event(VK_CONTROL, 0, 0, UIntPtr.Zero);
+        keybd_event(VK_ESCAPE, 0, 0, UIntPtr.Zero);
+        keybd_event(VK_ESCAPE, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
+        keybd_event(VK_CONTROL, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
     }
 
     private void ActionCenter_Click(object sender, RoutedEventArgs e) => Open("ms-actioncenter:");
