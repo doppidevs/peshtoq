@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.IO;
 using System.Text;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Interop;
@@ -109,10 +110,14 @@ public partial class HeaderWindow : Window
 
     private void UpdateNetwork()
     {
-        var n = SystemInfo.Network();
-        NetworkIcon.Text = n.Glyph;
-        NetworkIcon.Opacity = n.Online ? 1 : 0.45;
-        NetworkButton.ToolTip = n.Tooltip;
+        // The WinRT networking calls can block briefly, so resolve them off the UI thread.
+        Task.Run(SystemInfo.Network).ContinueWith(t =>
+        {
+            var n = t.Result;
+            NetworkIcon.Text = n.Glyph;
+            NetworkIcon.Opacity = n.Online ? 1 : 0.45;
+            NetworkButton.ToolTip = n.Tooltip;
+        }, TaskScheduler.FromCurrentSynchronizationContext());
     }
 
     private void UpdateForeground()
@@ -157,30 +162,48 @@ public partial class HeaderWindow : Window
         WindowTitle.Visibility = redundant ? Visibility.Collapsed : Visibility.Visible;
     }
 
+    /// <summary>
+    /// The app's display name for a pid. Returns at once — a cached name, or the exe file name while a
+    /// background task reads the file's description. Reading version info on the UI thread was what put a
+    /// brief busy cursor over the header when the foreground app changed.
+    /// </summary>
     private string AppNameFor(uint pid)
     {
         if (_appNames.TryGetValue(pid, out var cached)) return cached;
-        string name = "Ilova";
-        IntPtr h = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, false, pid);
-        if (h != IntPtr.Zero)
-        {
-            try
-            {
-                var sb = new StringBuilder(1024);
-                int size = sb.Capacity;
-                if (QueryFullProcessImageName(h, 0, sb, ref size))
-                {
-                    string path = sb.ToString();
-                    string? description = null;
-                    try { description = FileVersionInfo.GetVersionInfo(path).FileDescription; } catch { }
-                    name = string.IsNullOrWhiteSpace(description) ? Path.GetFileNameWithoutExtension(path) : description.Trim();
-                }
-            }
-            finally { CloseHandle(h); }
-        }
+
+        string path = ProcessPath(pid);
+        string immediate = path.Length == 0 ? "Ilova" : Path.GetFileNameWithoutExtension(path);
         if (_appNames.Count > 200) _appNames.Clear();
-        _appNames[pid] = name;
-        return name;
+        _appNames[pid] = immediate;
+
+        if (path.Length > 0)
+        {
+            Task.Run(() =>
+            {
+                try { return FileVersionInfo.GetVersionInfo(path).FileDescription?.Trim(); }
+                catch { return null; }
+            }).ContinueWith(t =>
+            {
+                string nice = string.IsNullOrWhiteSpace(t.Result) ? immediate : t.Result!;
+                if (nice == immediate) return;
+                _appNames[pid] = nice;
+                if (IsVisible) UpdateForeground(); // refresh the label if that app is still in front
+            }, TaskScheduler.FromCurrentSynchronizationContext());
+        }
+        return immediate;
+    }
+
+    private static string ProcessPath(uint pid)
+    {
+        IntPtr h = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, false, pid);
+        if (h == IntPtr.Zero) return "";
+        try
+        {
+            var sb = new StringBuilder(1024);
+            int size = sb.Capacity;
+            return QueryFullProcessImageName(h, 0, sb, ref size) ? sb.ToString() : "";
+        }
+        finally { CloseHandle(h); }
     }
 
     private static void Open(string uri)
