@@ -11,7 +11,7 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <AssemblyName>Peshtoq</AssemblyName>
     <RootNamespace>Peshtoq</RootNamespace>
-    <Version>0.3.0</Version>
+    <Version>0.3.1</Version>
     <!-- Velopack needs VelopackApp.Run() before WPF starts, so we own Main (see Program.cs). -->
     <StartupObject>Peshtoq.Program</StartupObject>
     <!-- DPI awareness is set in app.manifest for WPF; the WinForms analyzer's advice does not apply -->

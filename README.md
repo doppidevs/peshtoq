@@ -60,13 +60,17 @@ ulanish/juftlash tayyor; clipboard sinxronizatsiyasi va sichqoncha/klaviatura
 uzatish keyingi bosqichlarda. Dizayn: [docs/mouse-without-borders.md](docs/mouse-without-borders.md),
 [docs/link-pairing.md](docs/link-pairing.md).
 
+## O'rnatish va auto-update
+
+`Setup.exe` ([Releases](https://github.com/doppidevs/peshtoq/releases)) bir marta
+ishga tushiriladi — ilova `%LocalAppData%\Peshtoq` ga o'rnatiladi (.NET kerak emas,
+admin kerak emas). Shundan keyin ilova o'zi fonda yangi versiyani ko'radi, **delta**
+(faqat o'zgargan qism — odatda bir necha yuz KB) yuklaydi va Sozlamalar → *Yangilanish*
+dan "Qayta ishga tushirish va yangilash" bosilganda qo'llaydi. [Velopack](https://github.com/velopack/velopack)
+asosida. Dizayn: [docs/updates.md](docs/updates.md).
+
 ## Rejada
 
-- **Auto-update** (keyinchalik): hozir har versiya GitHub Releases'dan qo'lda
-  yuklanadi. Tavsiya — [Velopack](https://github.com/velopack/velopack): delta
-  update (bir necha MB, to'liq 179MB emas) + bir martalik `Setup.exe` installer,
-  manba sifatida GitHub Releases. Muqobil: oddiy ichki updater (single-exe'ni
-  saqlaydi, lekin har safar to'liq yuklaydi).
 - Link 2b: **edge-handoff** (kursor ekran chetiga yetganda avtomatik o'tish) →
   fayl ko'chirish
 - Windows bildirishnomalarini header'da ko'rsatish (`UserNotificationListener`)

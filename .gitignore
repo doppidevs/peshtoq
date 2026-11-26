@@ -427,3 +427,7 @@ FodyWeavers.xsd
 
 # published build artifacts
 dist/
+
+# Velopack packaging output
+pub/
+Releases/
