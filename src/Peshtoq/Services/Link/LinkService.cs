@@ -34,6 +34,7 @@ public sealed class LinkService : IDisposable
     public event Action<DiscoveredPeer>? PeerSeen;
 
     public LinkState State { get; private set; } = LinkState.Idle;
+    public int Port { get; private set; }
     public IReadOnlyList<DiscoveredPeer> Peers => _discovery?.Peers ?? Array.Empty<DiscoveredPeer>();
     public IReadOnlyList<PairedDevice> Paired => _paired.Devices;
 
@@ -50,18 +51,25 @@ public sealed class LinkService : IDisposable
 
         _listener = new TcpListener(IPAddress.Any, 0); // 0 = OS picks a free port
         _listener.Start();
-        int port = ((IPEndPoint)_listener.LocalEndpoint).Port;
+        Port = ((IPEndPoint)_listener.LocalEndpoint).Port;
 
-        _discovery = new Discovery(_identity.SpkiHash, port);
+        _discovery = new Discovery(_identity.SpkiHash, Port);
         _discovery.PeerSeen += p => PeerSeen?.Invoke(p);
         _discovery.Start();
 
         Set(LinkState.Listening);
-        Log($"Tinglayapti — port {port}, id {_identity.SpkiHash[..8]}…");
+        Log($"Tinglayapti — port {Port}, id {_identity.SpkiHash[..8]}…");
         _ = Task.Run(() => AcceptLoop(_cts.Token));
     }
 
     public void Unpair(string spkiHash) => _paired.Unpair(spkiHash);
+
+    /// <summary>Drop the active peer connection, if any; the listener keeps running.</summary>
+    public void Disconnect()
+    {
+        _active?.Dispose();
+        _active = null;
+    }
 
     private async Task AcceptLoop(CancellationToken ct)
     {

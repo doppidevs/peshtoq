@@ -20,9 +20,14 @@ public sealed class PairedDevice
 /// </summary>
 public sealed class PairedStore
 {
-    private static string FilePath => Path.Combine(AppPaths.DataDir, "paired.json");
+    private readonly string? _filePath;
     private readonly object _gate = new();
     private List<PairedDevice> _devices = new();
+
+    public PairedStore() => _filePath = Path.Combine(AppPaths.DataDir, "paired.json");
+
+    /// <summary>Custom path, or null for an in-memory store that never persists — for tests.</summary>
+    internal PairedStore(string? filePath) => _filePath = filePath;
 
     public IReadOnlyList<PairedDevice> Devices
     {
@@ -35,8 +40,8 @@ public sealed class PairedStore
         {
             try
             {
-                if (!File.Exists(FilePath)) return;
-                var protectedBytes = File.ReadAllBytes(FilePath);
+                if (_filePath is null || !File.Exists(_filePath)) return;
+                var protectedBytes = File.ReadAllBytes(_filePath);
                 var json = ProtectedData.Unprotect(protectedBytes, null, DataProtectionScope.CurrentUser);
                 _devices = JsonSerializer.Deserialize<List<PairedDevice>>(json) ?? new();
             }
@@ -85,11 +90,12 @@ public sealed class PairedStore
 
     private void Save()
     {
+        if (_filePath is null) return; // in-memory
         try
         {
             var json = JsonSerializer.SerializeToUtf8Bytes(_devices);
             var protectedBytes = ProtectedData.Protect(json, null, DataProtectionScope.CurrentUser);
-            File.WriteAllBytes(FilePath, protectedBytes);
+            File.WriteAllBytes(_filePath, protectedBytes);
         }
         catch { }
     }

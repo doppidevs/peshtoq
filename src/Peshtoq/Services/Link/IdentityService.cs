@@ -25,6 +25,15 @@ public sealed class IdentityService
         SpkiHash = SpkiHashOf(Certificate);
     }
 
+    private IdentityService(X509Certificate2 cert)
+    {
+        Certificate = cert;
+        SpkiHash = SpkiHashOf(cert);
+    }
+
+    /// <summary>A fresh in-memory identity that never touches disk — for tests/loopback.</summary>
+    public static IdentityService CreateEphemeral() => new(Create());
+
     private static X509Certificate2 LoadOrCreate()
     {
         if (File.Exists(PfxPath))

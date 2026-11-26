@@ -15,6 +15,18 @@ public partial class App : Application
 
     protected override void OnStartup(StartupEventArgs e)
     {
+        // Opt-in loopback verification of Peshtoq Link; bypasses the single-instance mutex so it
+        // can run while the real app is open. See Services/Link/LinkSelfTest.cs.
+        if (e.Args.Contains("--link-selftest"))
+        {
+            var logPath = Path.Combine(AppPaths.DataDir, "link-selftest.log");
+            // Run off the UI thread: awaits inside must not try to resume on a thread we are blocking.
+            try { Task.Run(() => Services.Link.LinkSelfTest.RunAsync(logPath)).GetAwaiter().GetResult(); }
+            catch (Exception ex) { LogError(ex); }
+            Shutdown();
+            return;
+        }
+
         _singleInstance = new Mutex(true, "Peshtoq.SingleInstance", out bool isFirst);
         if (!isFirst)
         {
