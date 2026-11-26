@@ -60,9 +60,15 @@ ulanish/juftlash tayyor; clipboard sinxronizatsiyasi va sichqoncha/klaviatura
 uzatish keyingi bosqichlarda. Dizayn: [docs/mouse-without-borders.md](docs/mouse-without-borders.md),
 [docs/link-pairing.md](docs/link-pairing.md).
 
-## Rejada (v0.2)
+## Rejada
 
-- Link: clipboard sync → kursor handoff → klaviatura → fayl ko'chirish
+- **Auto-update** (keyinchalik): hozir har versiya GitHub Releases'dan qo'lda
+  yuklanadi. Tavsiya — [Velopack](https://github.com/velopack/velopack): delta
+  update (bir necha MB, to'liq 179MB emas) + bir martalik `Setup.exe` installer,
+  manba sifatida GitHub Releases. Muqobil: oddiy ichki updater (single-exe'ni
+  saqlaydi, lekin har safar to'liq yuklaydi).
+- Link 2b: **edge-handoff** (kursor ekran chetiga yetganda avtomatik o'tish) →
+  fayl ko'chirish
 - Windows bildirishnomalarini header'da ko'rsatish (`UserNotificationListener`)
 - Bir nechta monitor
 - Island'ga haqiqiy acrylic (oynani shaklga moslash)
