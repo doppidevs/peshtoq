@@ -51,8 +51,18 @@ Bitta exe qilib chiqarish:
 dotnet publish src/Peshtoq -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true
 ```
 
+## Link — qurilmalararo (eksperimental)
+
+Bir LANdagi ikki Peshtoq bir-birini topadi va **juftlanadi**: o'zaro TLS, va
+ikki ekranda bir xil 6 xonali kod (SAS) solishtiriladi — mos bo'lsa tasdiqlanadi.
+Sozlamalar → *Link* dan yoqiladi (standart holatda o'chiq). Hozircha faqat
+ulanish/juftlash tayyor; clipboard sinxronizatsiyasi va sichqoncha/klaviatura
+uzatish keyingi bosqichlarda. Dizayn: [docs/mouse-without-borders.md](docs/mouse-without-borders.md),
+[docs/link-pairing.md](docs/link-pairing.md).
+
 ## Rejada (v0.2)
 
+- Link: clipboard sync → kursor handoff → klaviatura → fayl ko'chirish
 - Windows bildirishnomalarini header'da ko'rsatish (`UserNotificationListener`)
 - Bir nechta monitor
 - Island'ga haqiqiy acrylic (oynani shaklga moslash)

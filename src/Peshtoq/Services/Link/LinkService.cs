@@ -34,6 +34,7 @@ public sealed class LinkService : IDisposable
     public event Action<DiscoveredPeer>? PeerSeen;
 
     public LinkState State { get; private set; } = LinkState.Idle;
+    public string LastStatus { get; private set; } = "";
     public int Port { get; private set; }
     public IReadOnlyList<DiscoveredPeer> Peers => _discovery?.Peers ?? Array.Empty<DiscoveredPeer>();
     public IReadOnlyList<PairedDevice> Paired => _paired.Devices;
@@ -187,7 +188,7 @@ public sealed class LinkService : IDisposable
     }
 
     private void Set(LinkState s) { State = s; StateChanged?.Invoke(s); }
-    private void Log(string msg) => Status?.Invoke(msg);
+    private void Log(string msg) { LastStatus = msg; Status?.Invoke(msg); }
 
     public void Dispose()
     {

@@ -1,14 +1,18 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Interop;
+using System.Windows.Media;
+using System.Windows.Threading;
 using Peshtoq.Native;
 using Peshtoq.Services;
+using Peshtoq.Services.Link;
 
 namespace Peshtoq.Views;
 
 public partial class SettingsWindow : Window
 {
     private bool _loading;
+    private readonly DispatcherTimer _linkRefresh = new() { Interval = TimeSpan.FromMilliseconds(1200) };
 
     public SettingsWindow()
     {
@@ -16,6 +20,9 @@ public partial class SettingsWindow : Window
         SourceInitialized += OnSourceInitialized;
         Load();
         Wire();
+        _linkRefresh.Tick += (_, _) => RefreshLink();
+        _linkRefresh.Start();
+        RefreshLink();
     }
 
     private void OnSourceInitialized(object? sender, EventArgs e)
@@ -48,6 +55,7 @@ public partial class SettingsWindow : Window
         TabSys.IsChecked = s.ShowSys;
 
         StartupCheck.IsChecked = StartupManager.IsEnabled;
+        LinkCheck.IsChecked = s.LinkEnabled;
         _loading = false;
     }
 
@@ -81,6 +89,79 @@ public partial class SettingsWindow : Window
 
         StartupCheck.Checked += (_, _) => { if (!_loading) StartupManager.Set(true); };
         StartupCheck.Unchecked += (_, _) => { if (!_loading) StartupManager.Set(false); };
+
+        LinkCheck.Checked += (_, _) => { Edit(s => s.LinkEnabled = true); RefreshLink(); };
+        LinkCheck.Unchecked += (_, _) => { Edit(s => s.LinkEnabled = false); RefreshLink(); };
+    }
+
+    private static App? AppHost => Application.Current as App;
+
+    private void RefreshLink()
+    {
+        var link = AppHost?.Link;
+        if (link is null)
+        {
+            LinkStatus.Text = "O'chirilgan. Yoqilganda bu qurilma LANda ko'rinadi va juftlanadi.";
+            PeerList.ItemsSource = null;
+            PairedList.ItemsSource = null;
+            PeersHeader.Visibility = PairedHeader.Visibility = Visibility.Collapsed;
+            return;
+        }
+
+        PeersHeader.Visibility = PairedHeader.Visibility = Visibility.Visible;
+        LinkStatus.Text = $"{StateLabel(link.State)}  ·  {link.LastStatus}";
+
+        var peers = link.Peers.OrderBy(p => p.Host).ToList();
+        PeerList.ItemsSource = peers.Count == 0
+            ? new[] { Muted("— hali qurilma topilmadi") }
+            : peers.Select(p => Row($"{p.Host}  ({p.Address})", "Ulanish", () => _ = link.ConnectAsync(p))).ToArray();
+
+        var paired = link.Paired;
+        PairedList.ItemsSource = paired.Count == 0
+            ? new[] { Muted("— juftlangan qurilma yo'q") }
+            : paired.Select(d => Row(d.Name, "O'chirish", () => { link.Unpair(d.SpkiHash); RefreshLink(); })).ToArray();
+    }
+
+    private static string StateLabel(LinkState s) => s switch
+    {
+        LinkState.Listening => "Tayyor",
+        LinkState.Handshaking => "Ulanmoqda…",
+        LinkState.Pairing => "Juftlanmoqda…",
+        LinkState.Connected => "Ulangan",
+        LinkState.Disconnected => "Uzilgan",
+        _ => "—",
+    };
+
+    private UIElement Muted(string text) => new TextBlock
+    {
+        Text = text,
+        Foreground = (Brush)FindResource("MutedBrush"),
+        Margin = new Thickness(0, 2, 0, 2),
+    };
+
+    private UIElement Row(string text, string button, Action onClick)
+    {
+        var dock = new DockPanel { Margin = new Thickness(0, 3, 0, 3), LastChildFill = true };
+        var btn = new Button
+        {
+            Content = button,
+            Padding = new Thickness(12, 4, 12, 4),
+            Background = (Brush)FindResource("AccentBrush"),
+            Foreground = Brushes.White,
+            BorderThickness = new Thickness(0),
+            Cursor = System.Windows.Input.Cursors.Hand,
+        };
+        btn.Click += (_, _) => onClick();
+        DockPanel.SetDock(btn, Dock.Right);
+        dock.Children.Add(btn);
+        dock.Children.Add(new TextBlock
+        {
+            Text = text,
+            Foreground = (Brush)FindResource("FgBrush"),
+            VerticalAlignment = VerticalAlignment.Center,
+            TextTrimming = TextTrimming.CharacterEllipsis,
+        });
+        return dock;
     }
 
     private void Edit(Action<Settings> change)
@@ -124,6 +205,7 @@ public partial class SettingsWindow : Window
 
     protected override void OnClosed(EventArgs e)
     {
+        _linkRefresh.Stop();
         Settings.Save();
         base.OnClosed(e);
     }

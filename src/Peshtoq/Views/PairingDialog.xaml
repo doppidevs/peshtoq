@@ -1,0 +1,35 @@
+<Window x:Class="Peshtoq.Views.PairingDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Peshtoq — Juftlash"
+        Width="380" SizeToContent="Height" ResizeMode="NoResize"
+        WindowStartupLocation="CenterScreen" ShowInTaskbar="True" Topmost="True"
+        Background="#15181F" Foreground="{StaticResource FgBrush}"
+        FontFamily="{StaticResource UiFont}" FontSize="13"
+        TextOptions.TextFormattingMode="Display">
+
+    <StackPanel Margin="26,22,26,22">
+        <TextBlock x:Name="Heading" FontWeight="SemiBold" FontSize="15" Margin="0,0,0,6" TextWrapping="Wrap" />
+        <TextBlock Text="Ikkala ekrandagi kod bir xil bo'lsa — tasdiqlang. Mos kelmasa, rad eting (xavfsizlik)."
+                   Foreground="{StaticResource MutedBrush}" TextWrapping="Wrap" Margin="0,0,0,16" />
+
+        <Border Background="#1E222B" CornerRadius="12" Padding="0,16" Margin="0,0,0,18">
+            <TextBlock x:Name="SasText" HorizontalAlignment="Center"
+                       FontSize="40" FontWeight="Bold" FontFamily="Consolas"
+                       Foreground="{StaticResource AccentBrush}" />
+        </Border>
+
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+            <Button Content="Rad etish" Padding="16,8" Margin="0,0,10,0"
+                    Background="#2A2F3A" Foreground="{StaticResource FgBrush}"
+                    BorderThickness="0" Cursor="Hand" Click="Reject_Click">
+                <Button.Resources><Style TargetType="Border"><Setter Property="CornerRadius" Value="8" /></Style></Button.Resources>
+            </Button>
+            <Button Content="Tasdiqlash" Padding="16,8"
+                    Background="{StaticResource AccentBrush}" Foreground="White"
+                    BorderThickness="0" Cursor="Hand" Click="Confirm_Click">
+                <Button.Resources><Style TargetType="Border"><Setter Property="CornerRadius" Value="8" /></Style></Button.Resources>
+            </Button>
+        </StackPanel>
+    </StackPanel>
+</Window>

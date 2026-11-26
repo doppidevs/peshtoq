@@ -92,6 +92,17 @@
 
         <CheckBox x:Name="StartupCheck" Content="Windows bilan ishga tushirish" Margin="0,0,0,20" />
 
+        <Border Height="1" Background="#262B36" Margin="0,0,0,18" />
+        <TextBlock Text="Link — qurilmalararo (bir LAN)" Style="{StaticResource SectionLabel}" />
+        <CheckBox x:Name="LinkCheck" Content="Yoqish" Margin="0,0,0,8" />
+        <TextBlock x:Name="LinkStatus" Foreground="{StaticResource MutedBrush}" TextWrapping="Wrap" Margin="0,0,0,12" />
+
+        <TextBlock x:Name="PeersHeader" Text="Topilgan qurilmalar" Foreground="{StaticResource MutedBrush}" Margin="0,0,0,4" />
+        <ItemsControl x:Name="PeerList" Margin="0,0,0,12" />
+
+        <TextBlock x:Name="PairedHeader" Text="Juftlangan qurilmalar" Foreground="{StaticResource MutedBrush}" Margin="0,0,0,4" />
+        <ItemsControl x:Name="PairedList" Margin="0,0,0,20" />
+
         <Button x:Name="CloseButton" Content="Yopish" HorizontalAlignment="Right"
                 Padding="18,8" Background="{StaticResource AccentBrush}" Foreground="White"
                 BorderThickness="0" Cursor="Hand" Click="Close_Click">

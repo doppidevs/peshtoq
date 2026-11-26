@@ -35,6 +35,9 @@ internal sealed class Settings
     public bool ShowClip { get; set; } = true;
     public bool ShowSys { get; set; } = true;
 
+    /// <summary>Peshtoq Link (cross-device control over the LAN). Off by default — opt-in.</summary>
+    public bool LinkEnabled { get; set; }
+
     /// <summary>At least one tab must stay on, or the panel would be empty.</summary>
     public int EnabledTabCount => (ShowMedia ? 1 : 0) + (ShowNotes ? 1 : 0) + (ShowClip ? 1 : 0) + (ShowSys ? 1 : 0);
 

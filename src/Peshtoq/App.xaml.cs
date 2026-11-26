@@ -1,6 +1,7 @@
 using System.IO;
 using System.Windows;
 using Peshtoq.Services;
+using Peshtoq.Services.Link;
 using Peshtoq.Views;
 
 namespace Peshtoq;
@@ -12,6 +13,13 @@ public partial class App : Application
     private IslandWindow? _island;
     private TrayIcon? _tray;
     private SettingsWindow? _settings;
+
+    private IdentityService? _identity;
+    private PairedStore? _paired;
+    private LinkService? _link;
+
+    /// <summary>The live Link service, or null when the feature is off. Read by SettingsWindow.</summary>
+    public LinkService? Link => _link;
 
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -57,7 +65,36 @@ public partial class App : Application
         };
 
         _tray = new TrayIcon(onSettings: ShowSettings, onExit: Shutdown);
+
+        Settings.Changed += OnSettingsChanged;
+        if (Settings.Current.LinkEnabled) StartLink();
     }
+
+    private void OnSettingsChanged()
+    {
+        if (Settings.Current.LinkEnabled) StartLink();
+        else StopLink();
+    }
+
+    private void StartLink()
+    {
+        if (_link is not null) return;
+        _identity ??= new IdentityService();
+        _paired ??= new PairedStore();
+        _paired.Load();
+        _link = new LinkService(_identity, _paired) { ConfirmPairing = PromptPairing };
+        _link.Start();
+    }
+
+    private void StopLink()
+    {
+        _link?.Dispose();
+        _link = null;
+    }
+
+    /// <summary>Show the SAS dialog on the UI thread and report whether the user confirmed a match.</summary>
+    private Task<bool> PromptPairing(PairingPrompt prompt) =>
+        Dispatcher.InvokeAsync(() => new PairingDialog(prompt).ShowDialog() == true).Task;
 
     private void ShowSettings()
     {
@@ -76,6 +113,7 @@ public partial class App : Application
 
     protected override void OnExit(ExitEventArgs e)
     {
+        StopLink();
         _tray?.Dispose();
         _island?.Shutdown();
         _header?.Shutdown();
