@@ -32,6 +32,10 @@
 
             <!-- right: status -->
             <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                <Border x:Name="LinkIndicator" Visibility="Collapsed" Background="{StaticResource AccentBrush}"
+                        CornerRadius="9" Padding="9,2" Margin="0,0,6,0" VerticalAlignment="Center">
+                    <TextBlock x:Name="LinkIndicatorText" Foreground="White" FontWeight="SemiBold" FontSize="11.5" />
+                </Border>
                 <Button Style="{StaticResource HeaderButton}" ToolTip="Bildirishnomalar markazi" Click="ActionCenter_Click">
                     <TextBlock Text="&#xEA8F;" FontFamily="{StaticResource IconFont}" FontSize="14" />
                 </Button>

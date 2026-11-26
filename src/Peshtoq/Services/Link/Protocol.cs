@@ -13,13 +13,16 @@ public enum PacketType : byte
     Hello = 1,
     Heartbeat = 2,
 
-    // Reserved for later stages — see docs/mouse-without-borders.md §3.
     ClipText = 10,
     ClipBlob = 11,
+
+    // Input relay (stage 2).
     MouseMove = 20,
     MouseButton = 21,
     Wheel = 22,
     Key = 23,
+    ControlAcquire = 30,
+    ControlRelease = 31,
 }
 
 /// <summary>
@@ -84,4 +87,44 @@ public static class Protocol
         if (payload.Length < 1) return (0, "");
         return (payload[0], Encoding.UTF8.GetString(payload, 1, payload.Length - 1));
     }
+
+    // ----- Input packet encode/decode (stage 2) -----
+
+    public static byte[] MouseMove(short dx, short dy)
+    {
+        var b = new byte[4];
+        BinaryPrimitives.WriteInt16BigEndian(b, dx);
+        BinaryPrimitives.WriteInt16BigEndian(b.AsSpan(2), dy);
+        return b;
+    }
+
+    public static (int dx, int dy) ReadMouseMove(byte[] p) =>
+        p.Length < 4 ? (0, 0) : (BinaryPrimitives.ReadInt16BigEndian(p), BinaryPrimitives.ReadInt16BigEndian(p.AsSpan(2)));
+
+    public static byte[] MouseButton(byte button, bool down) => new[] { button, (byte)(down ? 1 : 0) };
+    public static (int button, bool down) ReadMouseButton(byte[] p) => p.Length < 2 ? (-1, false) : (p[0], p[1] != 0);
+
+    public static byte[] Wheel(short delta, bool horizontal)
+    {
+        var b = new byte[3];
+        BinaryPrimitives.WriteInt16BigEndian(b, delta);
+        b[2] = (byte)(horizontal ? 1 : 0);
+        return b;
+    }
+
+    public static (int delta, bool horizontal) ReadWheel(byte[] p) =>
+        p.Length < 3 ? (0, false) : (BinaryPrimitives.ReadInt16BigEndian(p), p[2] != 0);
+
+    public static byte[] Key(ushort vk, ushort scan, bool down, bool extended)
+    {
+        var b = new byte[5];
+        BinaryPrimitives.WriteUInt16BigEndian(b, vk);
+        BinaryPrimitives.WriteUInt16BigEndian(b.AsSpan(2), scan);
+        b[4] = (byte)((down ? 1 : 0) | (extended ? 2 : 0));
+        return b;
+    }
+
+    public static (ushort vk, ushort scan, bool down, bool extended) ReadKey(byte[] p) =>
+        p.Length < 5 ? ((ushort)0, (ushort)0, false, false)
+        : (BinaryPrimitives.ReadUInt16BigEndian(p), BinaryPrimitives.ReadUInt16BigEndian(p.AsSpan(2)), (p[4] & 1) != 0, (p[4] & 2) != 0);
 }

@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using System.Threading.Channels;
 
 namespace Peshtoq.Services.Link;
 
@@ -36,6 +37,11 @@ public sealed class LinkService : IDisposable
 
     /// <summary>Raised (off the UI thread) when the connected peer sends clipboard text.</summary>
     public event Action<string>? ClipTextReceived;
+
+    /// <summary>Raised (off the UI thread) for each input/control packet from the peer (stage 2).</summary>
+    public event Action<PacketType, byte[]>? InputPacket;
+
+    private Channel<(PacketType type, byte[] payload)>? _sendChannel;
 
     private const int MaxClipBytes = 60_000; // stay under Protocol.MaxFrame; don't sync huge blobs
 
@@ -93,6 +99,13 @@ public sealed class LinkService : IDisposable
     {
         try { await conn.SendAsync(type, payload, ct).ConfigureAwait(false); }
         catch (Exception ex) { Log($"Yuborish xatosi: {ex.Message}"); }
+    }
+
+    /// <summary>Queue a packet for ordered delivery (input events must keep their order).</summary>
+    public void EnqueueSend(PacketType type, byte[] payload)
+    {
+        if (State != LinkState.Connected) return;
+        _sendChannel?.Writer.TryWrite((type, payload));
     }
 
     private async Task AcceptLoop(CancellationToken ct)
@@ -171,7 +184,10 @@ public sealed class LinkService : IDisposable
     private async Task RunConnection(LinkConnection conn, CancellationToken ct)
     {
         using var linked = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        var channel = Channel.CreateUnbounded<(PacketType, byte[])>(new UnboundedChannelOptions { SingleReader = true });
+        _sendChannel = channel;
         var beat = Task.Run(() => HeartbeatSender(conn, linked.Token), linked.Token);
+        var pump = Task.Run(() => SendPump(conn, channel, linked.Token), linked.Token);
         var last = DateTime.UtcNow;
         try
         {
@@ -189,22 +205,44 @@ public sealed class LinkService : IDisposable
                 last = DateTime.UtcNow;
 
                 var (type, payload) = frame.Value;
-                if (type == PacketType.ClipText)
+                switch (type)
                 {
-                    var text = Encoding.UTF8.GetString(payload);
-                    if (text.Length > 0) ClipTextReceived?.Invoke(text);
+                    case PacketType.ClipText:
+                        var text = Encoding.UTF8.GetString(payload);
+                        if (text.Length > 0) ClipTextReceived?.Invoke(text);
+                        break;
+                    case PacketType.MouseMove:
+                    case PacketType.MouseButton:
+                    case PacketType.Wheel:
+                    case PacketType.Key:
+                    case PacketType.ControlAcquire:
+                    case PacketType.ControlRelease:
+                        InputPacket?.Invoke(type, payload);
+                        break;
+                    // Heartbeat just refreshes `last`.
                 }
-                // Heartbeat just refreshes `last`; other types arrive in later stages.
             }
         }
         catch (Exception ex) { Log($"Ulanish xatosi: {ex.Message}"); }
         finally
         {
             linked.Cancel();
+            channel.Writer.TryComplete();
+            if (_sendChannel == channel) _sendChannel = null;
             conn.Dispose();
             if (_active == conn) _active = null;
             Set(LinkState.Listening);
         }
+    }
+
+    private static async Task SendPump(LinkConnection conn, Channel<(PacketType, byte[])> channel, CancellationToken ct)
+    {
+        try
+        {
+            await foreach (var (type, payload) in channel.Reader.ReadAllAsync(ct).ConfigureAwait(false))
+                await conn.SendAsync(type, payload, ct).ConfigureAwait(false);
+        }
+        catch { /* connection ending — RunConnection's finally tears down */ }
     }
 
     private async Task HeartbeatSender(LinkConnection conn, CancellationToken ct)

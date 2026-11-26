@@ -87,6 +87,28 @@ public static class LinkSelfTest
             b.SendClipText("javob-B→A");
             bool baOk = await Task.WhenAny(gotAtA.Task, Task.Delay(4000)) == gotAtA.Task;
             Check("clipboard text crossed B->A", baOk && gotAtA.Task.Result == "javob-B→A");
+
+            // 5. Input packets: ordered delivery + correct decode (hooks/injection tested on 2 machines).
+            var inbox = new System.Collections.Concurrent.ConcurrentQueue<(PacketType, byte[])>();
+            var count = new TaskCompletionSource();
+            b.InputPacket += (t, p) => { inbox.Enqueue((t, p)); if (inbox.Count >= 3) count.TrySetResult(); };
+
+            a.EnqueueSend(PacketType.ControlAcquire, new byte[] { 0 });
+            a.EnqueueSend(PacketType.MouseMove, Protocol.MouseMove(12, -7));
+            a.EnqueueSend(PacketType.Key, Protocol.Key(0x41, 0x1E, true, false));
+            bool got3 = await Task.WhenAny(count.Task, Task.Delay(4000)) == count.Task;
+            var arr = inbox.ToArray();
+            Check("3 input packets arrived in order", got3 && arr.Length >= 3
+                && arr[0].Item1 == PacketType.ControlAcquire
+                && arr[1].Item1 == PacketType.MouseMove
+                && arr[2].Item1 == PacketType.Key);
+            if (arr.Length >= 3)
+            {
+                var (mdx, mdy) = Protocol.ReadMouseMove(arr[1].Item2);
+                var (kvk, kscan, kdown, kext) = Protocol.ReadKey(arr[2].Item2);
+                Check("MouseMove decoded (12,-7)", mdx == 12 && mdy == -7);
+                Check("Key decoded (vk=0x41 scan=0x1E down)", kvk == 0x41 && kscan == 0x1E && kdown && !kext);
+            }
         }
         catch (Exception ex)
         {

@@ -17,6 +17,7 @@ public partial class App : Application
     private IdentityService? _identity;
     private PairedStore? _paired;
     private LinkService? _link;
+    private InputController? _input;
 
     /// <summary>The live Link service, or null when the feature is off. Read by SettingsWindow.</summary>
     public LinkService? Link => _link;
@@ -85,6 +86,12 @@ public partial class App : Application
         _link = new LinkService(_identity, _paired) { ConfirmPairing = PromptPairing };
         _link.ClipTextReceived += OnRemoteClipReceived;
         if (_island is not null) _island.Clipboard.TextCopied += OnLocalClipCopied;
+
+        _input = new InputController(_link);
+        _input.ControllingChanged += _ => UpdateLinkIndicator();
+        _input.BeingControlledChanged += _ => UpdateLinkIndicator();
+        _input.Toast += msg => Dispatcher.InvokeAsync(() => _tray?.ShowToast("Peshtoq Link", msg));
+
         _link.Start();
     }
 
@@ -92,9 +99,18 @@ public partial class App : Application
     {
         if (_island is not null) _island.Clipboard.TextCopied -= OnLocalClipCopied;
         if (_link is not null) _link.ClipTextReceived -= OnRemoteClipReceived;
+        _input?.Dispose();
+        _input = null;
         _link?.Dispose();
         _link = null;
+        UpdateLinkIndicator();
     }
+
+    private void UpdateLinkIndicator() => Dispatcher.InvokeAsync(() =>
+        _header?.SetLinkIndicator(
+            _input is null ? null :
+            _input.Controlling ? "→ Link: boshqaryapsiz" :
+            _input.BeingControlled ? "⇄ Link: boshqarilyapti" : null));
 
     // Clipboard sync: local copy -> peer; peer's text -> local clipboard + history (on the UI thread).
     private void OnLocalClipCopied(string text) => _link?.SendClipText(text);

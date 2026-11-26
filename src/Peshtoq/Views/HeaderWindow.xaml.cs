@@ -151,6 +151,20 @@ public partial class HeaderWindow : Window
         SetActive(app, windowTitle);
     }
 
+    /// <summary>Show or hide the Link control indicator (set text to null to hide).</summary>
+    public void SetLinkIndicator(string? text)
+    {
+        if (string.IsNullOrEmpty(text))
+        {
+            LinkIndicator.Visibility = Visibility.Collapsed;
+        }
+        else
+        {
+            LinkIndicatorText.Text = text;
+            LinkIndicator.Visibility = Visibility.Visible;
+        }
+    }
+
     private void SetActive(string app, string title)
     {
         AppName.Text = app;

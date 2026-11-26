@@ -39,6 +39,10 @@ internal sealed class TrayIcon : IDisposable
         _icon.DoubleClick += (_, _) => onSettings();
     }
 
+    /// <summary>Brief, non-blocking notification (used by Link for control/kill-switch feedback).</summary>
+    public void ShowToast(string title, string message) =>
+        _icon.ShowBalloonTip(2500, title, message, WF.ToolTipIcon.Info);
+
     /// <summary>A dark rounded square with a white pill: the island in miniature.</summary>
     private static Icon DrawIcon()
     {
