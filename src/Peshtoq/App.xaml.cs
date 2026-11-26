@@ -83,14 +83,23 @@ public partial class App : Application
         _paired ??= new PairedStore();
         _paired.Load();
         _link = new LinkService(_identity, _paired) { ConfirmPairing = PromptPairing };
+        _link.ClipTextReceived += OnRemoteClipReceived;
+        if (_island is not null) _island.Clipboard.TextCopied += OnLocalClipCopied;
         _link.Start();
     }
 
     private void StopLink()
     {
+        if (_island is not null) _island.Clipboard.TextCopied -= OnLocalClipCopied;
+        if (_link is not null) _link.ClipTextReceived -= OnRemoteClipReceived;
         _link?.Dispose();
         _link = null;
     }
+
+    // Clipboard sync: local copy -> peer; peer's text -> local clipboard + history (on the UI thread).
+    private void OnLocalClipCopied(string text) => _link?.SendClipText(text);
+    private void OnRemoteClipReceived(string text) =>
+        Dispatcher.InvokeAsync(() => _island?.Clipboard.ApplyRemote(text));
 
     /// <summary>Show the SAS dialog on the UI thread and report whether the user confirmed a match.</summary>
     private Task<bool> PromptPairing(PairingPrompt prompt) =>

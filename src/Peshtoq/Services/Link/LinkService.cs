@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Sockets;
+using System.Text;
 
 namespace Peshtoq.Services.Link;
 
@@ -32,6 +33,11 @@ public sealed class LinkService : IDisposable
     public event Action<LinkState>? StateChanged;
     public event Action<string>? Status;
     public event Action<DiscoveredPeer>? PeerSeen;
+
+    /// <summary>Raised (off the UI thread) when the connected peer sends clipboard text.</summary>
+    public event Action<string>? ClipTextReceived;
+
+    private const int MaxClipBytes = 60_000; // stay under Protocol.MaxFrame; don't sync huge blobs
 
     public LinkState State { get; private set; } = LinkState.Idle;
     public string LastStatus { get; private set; } = "";
@@ -70,6 +76,23 @@ public sealed class LinkService : IDisposable
     {
         _active?.Dispose();
         _active = null;
+    }
+
+    /// <summary>Send locally-copied clipboard text to the connected peer (fire-and-forget).</summary>
+    public void SendClipText(string text)
+    {
+        var conn = _active;
+        if (conn is null || State != LinkState.Connected || string.IsNullOrEmpty(text)) return;
+        var bytes = Encoding.UTF8.GetBytes(text);
+        if (bytes.Length == 0 || bytes.Length > MaxClipBytes) return;
+        var ct = _cts?.Token ?? default;
+        _ = SendSafe(conn, PacketType.ClipText, bytes, ct);
+    }
+
+    private async Task SendSafe(LinkConnection conn, PacketType type, byte[] payload, CancellationToken ct)
+    {
+        try { await conn.SendAsync(type, payload, ct).ConfigureAwait(false); }
+        catch (Exception ex) { Log($"Yuborish xatosi: {ex.Message}"); }
     }
 
     private async Task AcceptLoop(CancellationToken ct)
@@ -164,7 +187,14 @@ public sealed class LinkService : IDisposable
                 var frame = await readTask.ConfigureAwait(false);
                 if (frame is null) { Log("Peer ulanishni yopdi"); break; }
                 last = DateTime.UtcNow;
-                // Stage 0: only Hello/Heartbeat are expected; later stages dispatch here.
+
+                var (type, payload) = frame.Value;
+                if (type == PacketType.ClipText)
+                {
+                    var text = Encoding.UTF8.GetString(payload);
+                    if (text.Length > 0) ClipTextReceived?.Invoke(text);
+                }
+                // Heartbeat just refreshes `last`; other types arrive in later stages.
             }
         }
         catch (Exception ex) { Log($"Ulanish xatosi: {ex.Message}"); }
@@ -181,7 +211,7 @@ public sealed class LinkService : IDisposable
     {
         while (!ct.IsCancellationRequested)
         {
-            try { await Protocol.WriteFrameAsync(conn.Stream, PacketType.Heartbeat, ReadOnlyMemory<byte>.Empty, ct).ConfigureAwait(false); }
+            try { await conn.SendAsync(PacketType.Heartbeat, ReadOnlyMemory<byte>.Empty, ct).ConfigureAwait(false); }
             catch { break; }
             try { await Task.Delay(HeartbeatEvery, ct).ConfigureAwait(false); } catch { break; }
         }

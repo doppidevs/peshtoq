@@ -46,6 +46,8 @@ public partial class IslandWindow : Window
 
     private readonly MediaService _media;
     private readonly ClipboardService _clipboard = new();
+    /// <summary>The clipboard history/service, shared with App so Link can sync it.</summary>
+    public ClipboardService Clipboard => _clipboard;
     private readonly NotesStore _notes = new();
     private readonly SystemInfo _system = new();
 

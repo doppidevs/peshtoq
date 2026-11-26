@@ -73,6 +73,20 @@ public static class LinkSelfTest
             bool reconnected = await WaitUntil(() => a.State == LinkState.Connected && b.State == LinkState.Connected, 8000);
             Check("reconnected while paired", reconnected);
             Check("no second prompt for a paired peer", promptsA == 1 && promptsB == 1);
+
+            // 4. Clipboard text over the link (transport only — ApplyRemote needs a real STA clipboard).
+            var gotAtB = new TaskCompletionSource<string>();
+            var gotAtA = new TaskCompletionSource<string>();
+            b.ClipTextReceived += t => gotAtB.TrySetResult(t);
+            a.ClipTextReceived += t => gotAtA.TrySetResult(t);
+
+            a.SendClipText("salom-A→B");
+            bool abOk = await Task.WhenAny(gotAtB.Task, Task.Delay(4000)) == gotAtB.Task;
+            Check("clipboard text crossed A->B", abOk && gotAtB.Task.Result == "salom-A→B");
+
+            b.SendClipText("javob-B→A");
+            bool baOk = await Task.WhenAny(gotAtA.Task, Task.Delay(4000)) == gotAtA.Task;
+            Check("clipboard text crossed B->A", baOk && gotAtA.Task.Result == "javob-B→A");
         }
         catch (Exception ex)
         {

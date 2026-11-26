@@ -65,8 +65,12 @@ public sealed class ClipboardService : IDisposable
     private const int MaxItems = 20;
     private HwndSource? _source;
     private bool _ignoreNext;
+    private string? _remoteApplyOnce; // text just applied from a peer: show it, but don't re-broadcast
 
     public ObservableCollection<ClipItem> Items { get; } = new();
+
+    /// <summary>Raised when text is copied locally (not when a peer's text is applied). Used by Link.</summary>
+    public event Action<string>? TextCopied;
 
     public void Start()
     {
@@ -112,6 +116,31 @@ public sealed class ClipboardService : IDisposable
         if (existing is not null) Items.Remove(existing);
         Items.Insert(0, new ClipItem(text));
         while (Items.Count > MaxItems) Items.RemoveAt(Items.Count - 1);
+
+        if (_remoteApplyOnce == text)
+            _remoteApplyOnce = null; // came from a peer — shown above, but do not echo it back
+        else
+            TextCopied?.Invoke(text); // locally copied — let Link forward it
+    }
+
+    /// <summary>
+    /// Place a peer's clipboard text onto this machine's clipboard and into the history, without
+    /// forwarding it back. Must run on the UI thread (the clipboard is STA-bound).
+    /// </summary>
+    public void ApplyRemote(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return;
+        if (text.Length > 4000) text = text[..4000];
+        try
+        {
+            _remoteApplyOnce = text;
+            _ignoreNext = false; // let OnClipboardChanged run so the item appears in the list
+            Clipboard.SetText(text);
+        }
+        catch (COMException)
+        {
+            _remoteApplyOnce = null;
+        }
     }
 
     public bool Copy(ClipItem item)

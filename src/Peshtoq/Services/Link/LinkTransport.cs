@@ -17,13 +17,23 @@ public sealed class LinkConnection : IDisposable
     public required string PeerSpkiHash { get; init; }
     public required string Sas { get; init; }   // "042 918" — compare on both screens
     private TcpClient? _tcp;
+    private readonly SemaphoreSlim _writeLock = new(1, 1);
 
     internal void Own(TcpClient tcp) => _tcp = tcp;
+
+    /// <summary>Serialized frame send — heartbeat and clipboard writers must not interleave on one SslStream.</summary>
+    public async Task SendAsync(PacketType type, ReadOnlyMemory<byte> payload, CancellationToken ct = default)
+    {
+        await _writeLock.WaitAsync(ct).ConfigureAwait(false);
+        try { await Protocol.WriteFrameAsync(Stream, type, payload, ct).ConfigureAwait(false); }
+        finally { _writeLock.Release(); }
+    }
 
     public void Dispose()
     {
         try { Stream.Dispose(); } catch { }
         try { _tcp?.Dispose(); } catch { }
+        _writeLock.Dispose();
     }
 }
 
