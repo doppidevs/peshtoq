@@ -11,7 +11,9 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <AssemblyName>Peshtoq</AssemblyName>
     <RootNamespace>Peshtoq</RootNamespace>
-    <Version>0.1.0</Version>
+    <Version>0.3.0</Version>
+    <!-- Velopack needs VelopackApp.Run() before WPF starts, so we own Main (see Program.cs). -->
+    <StartupObject>Peshtoq.Program</StartupObject>
     <!-- DPI awareness is set in app.manifest for WPF; the WinForms analyzer's advice does not apply -->
     <NoWarn>$(NoWarn);WFAC010</NoWarn>
   </PropertyGroup>
@@ -24,9 +26,16 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Own Main for Velopack: App.xaml must not auto-generate an entry point. -->
+    <ApplicationDefinition Remove="App.xaml" />
+    <Page Include="App.xaml" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="NAudio.Wasapi" Version="2.2.1" />
     <!-- DPAPI (ProtectedData) is not in the base framework on .NET 5+, even on Windows -->
     <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="8.0.0" />
+    <PackageReference Include="Velopack" Version="1.2.161" />
   </ItemGroup>
 
 </Project>

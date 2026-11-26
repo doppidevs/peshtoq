@@ -103,6 +103,22 @@
         <TextBlock x:Name="PairedHeader" Text="Juftlangan qurilmalar" Foreground="{StaticResource MutedBrush}" Margin="0,0,0,4" />
         <ItemsControl x:Name="PairedList" Margin="0,0,0,20" />
 
+        <Border Height="1" Background="#262B36" Margin="0,0,0,18" />
+        <TextBlock Text="Yangilanish" Style="{StaticResource SectionLabel}" />
+        <TextBlock x:Name="UpdateStatus" Foreground="{StaticResource MutedBrush}" TextWrapping="Wrap" Margin="0,0,0,8" />
+        <StackPanel Orientation="Horizontal" Margin="0,0,0,20">
+            <Button x:Name="CheckUpdateButton" Content="Yangilanishni tekshirish" Padding="14,7"
+                    Background="#2A2F3A" Foreground="{StaticResource FgBrush}" BorderThickness="0" Cursor="Hand"
+                    Click="CheckUpdate_Click">
+                <Button.Resources><Style TargetType="Border"><Setter Property="CornerRadius" Value="8" /></Style></Button.Resources>
+            </Button>
+            <Button x:Name="RestartUpdateButton" Content="Qayta ishga tushirish va yangilash" Padding="14,7" Margin="10,0,0,0"
+                    Visibility="Collapsed" Background="{StaticResource AccentBrush}" Foreground="White"
+                    BorderThickness="0" Cursor="Hand" Click="RestartUpdate_Click">
+                <Button.Resources><Style TargetType="Border"><Setter Property="CornerRadius" Value="8" /></Style></Button.Resources>
+            </Button>
+        </StackPanel>
+
         <Button x:Name="CloseButton" Content="Yopish" HorizontalAlignment="Right"
                 Padding="18,8" Background="{StaticResource AccentBrush}" Foreground="White"
                 BorderThickness="0" Cursor="Hand" Click="Close_Click">

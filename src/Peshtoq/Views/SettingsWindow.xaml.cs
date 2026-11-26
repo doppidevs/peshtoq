@@ -23,7 +23,43 @@ public partial class SettingsWindow : Window
         _linkRefresh.Tick += (_, _) => RefreshLink();
         _linkRefresh.Start();
         RefreshLink();
+        InitUpdates();
     }
+
+    private void InitUpdates()
+    {
+        var app = AppHost;
+        if (app is null) return;
+        string ver = app.Update.CurrentVersion;
+        UpdateStatus.Text = app.Update.IsInstalled
+            ? $"Joriy versiya: {ver}"
+            : "Portable rejim — avto-yangilanish faqat o'rnatilgan (Setup.exe) versiyada ishlaydi.";
+        if (app.PendingUpdate is { } p)
+        {
+            UpdateStatus.Text = $"Yangi versiya tayyor: {p.TargetFullRelease.Version} (joriy {ver}).";
+            RestartUpdateButton.Visibility = Visibility.Visible;
+        }
+    }
+
+    private async void CheckUpdate_Click(object sender, RoutedEventArgs e)
+    {
+        var app = AppHost;
+        if (app is null) return;
+        CheckUpdateButton.IsEnabled = false;
+        UpdateStatus.Text = "Tekshirilmoqda…";
+        string result = await app.CheckForUpdatesAsync(announce: false);
+        UpdateStatus.Text = result switch
+        {
+            "portable" => "Portable rejim — avto-yangilanish faqat o'rnatilgan versiyada ishlaydi.",
+            "uptodate" => $"Eng so'nggi versiya o'rnatilgan ({app.Update.CurrentVersion}).",
+            "ready" => $"Yangi versiya tayyor: {app.PendingUpdate?.TargetFullRelease.Version}. Qayta ishga tushiring.",
+            _ => "Tekshirishda xatolik (tarmoq yoki reliz topilmadi).",
+        };
+        RestartUpdateButton.Visibility = app.PendingUpdate is not null ? Visibility.Visible : Visibility.Collapsed;
+        CheckUpdateButton.IsEnabled = true;
+    }
+
+    private void RestartUpdate_Click(object sender, RoutedEventArgs e) => AppHost?.ApplyPendingUpdate();
 
     private void OnSourceInitialized(object? sender, EventArgs e)
     {

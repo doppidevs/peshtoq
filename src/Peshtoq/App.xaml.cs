@@ -19,6 +19,12 @@ public partial class App : Application
     private LinkService? _link;
     private InputController? _input;
 
+    private readonly UpdateService _update = new();
+    private Velopack.UpdateInfo? _pendingUpdate;
+
+    public UpdateService Update => _update;
+    public Velopack.UpdateInfo? PendingUpdate => _pendingUpdate;
+
     /// <summary>The live Link service, or null when the feature is off. Read by SettingsWindow.</summary>
     public LinkService? Link => _link;
 
@@ -69,6 +75,31 @@ public partial class App : Application
 
         Settings.Changed += OnSettingsChanged;
         if (Settings.Current.LinkEnabled) StartLink();
+
+        _ = CheckForUpdatesAsync(announce: true);
+    }
+
+    /// <summary>Background update check + download. On success a restart applies it (never mid-use).</summary>
+    public async Task<string> CheckForUpdatesAsync(bool announce)
+    {
+        try
+        {
+            if (!_update.IsInstalled) return "portable";
+            var info = await _update.CheckAsync();
+            if (info is null) return "uptodate";
+            await _update.DownloadAsync(info);
+            _pendingUpdate = info;
+            if (announce)
+                _ = Dispatcher.InvokeAsync(() => _tray?.ShowToast("Peshtoq",
+                    $"Yangi versiya tayyor: {info.TargetFullRelease.Version}. Sozlamalardan qayta ishga tushiring."));
+            return "ready";
+        }
+        catch { return "error"; }
+    }
+
+    public void ApplyPendingUpdate()
+    {
+        if (_pendingUpdate is not null) _update.ApplyAndRestart(_pendingUpdate);
     }
 
     private void OnSettingsChanged()
