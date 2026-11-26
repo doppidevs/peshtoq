@@ -25,6 +25,8 @@ public sealed class InputController : IInputHandler, IDisposable
 
     private int _centerX, _centerY;
 
+    private int _sentMoves, _injMoves;
+
     // detection state (capture thread)
     private bool _ctrlDown, _altDown;
     private readonly List<long> _chordTimes = new();
@@ -63,6 +65,7 @@ public sealed class InputController : IInputHandler, IDisposable
             _capturing = true;
             _capture.Start();
         }
+        LinkLog.Write("capture: hooks started (Connected)");
     }
 
     private void ReleaseAllAndStop()
@@ -94,6 +97,7 @@ public sealed class InputController : IInputHandler, IDisposable
         {
             _link.EnqueueSend(PacketType.MouseMove, Protocol.MouseMove((short)dx, (short)dy));
             SetCursorPos(_centerX, _centerY); // recenter so deltas stay clean and the local cursor is pinned
+            if (++_sentMoves % 60 == 1) LinkLog.Write($"sending mouse moves (count {_sentMoves})");
         }
         return true;
     }
@@ -120,7 +124,7 @@ public sealed class InputController : IInputHandler, IDisposable
 
         if (vk == VK_SCROLL)
         {
-            if (down) DetectToggle();
+            if (down) { LinkLog.Write("Scroll Lock DOWN (hook sees it)"); DetectToggle(); }
             return true; // reserve Scroll Lock for the toggle; never forwarded
         }
 
@@ -137,10 +141,11 @@ public sealed class InputController : IInputHandler, IDisposable
         long now = Environment.TickCount64;
         if (_lastScrollDown != 0 && now - _lastScrollDown <= ToggleWindowMs)
         {
+            LinkLog.Write($"Scroll Lock double-tap ({now - _lastScrollDown}ms) -> toggle");
             _lastScrollDown = 0;
             ToggleControl();
         }
-        else _lastScrollDown = now;
+        else { LinkLog.Write("Scroll Lock tap 1 (waiting for 2nd)"); _lastScrollDown = now; }
     }
 
     private void UpdateKill(ushort vk, bool down)
@@ -179,6 +184,7 @@ public sealed class InputController : IInputHandler, IDisposable
             }
         }
         _link.EnqueueSend(turnOn ? PacketType.ControlAcquire : PacketType.ControlRelease, new[] { (byte)0 });
+        LinkLog.Write($"CONTROL -> {(turnOn ? "ON (I control peer)" : "OFF")}; sent {(turnOn ? "ControlAcquire" : "ControlRelease")}");
         ControllingChanged?.Invoke(turnOn);
         Toast?.Invoke(turnOn ? "Boshqaruv peer'ga berildi (Scroll Lock ×2 — qaytarish)" : "Boshqaruv qaytarildi");
     }
@@ -207,6 +213,7 @@ public sealed class InputController : IInputHandler, IDisposable
         switch (type)
         {
             case PacketType.ControlAcquire:
+                LinkLog.Write("<< ControlAcquire received (peer wants to control us)");
                 if (!_beingControlled) { _beingControlled = true; BeingControlledChanged?.Invoke(true); Toast?.Invoke("Peer bu qurilmani boshqaryapti"); }
                 break;
             case PacketType.ControlRelease:
@@ -221,6 +228,7 @@ public sealed class InputController : IInputHandler, IDisposable
             case PacketType.MouseMove when _beingControlled:
                 var (dx, dy) = Protocol.ReadMouseMove(payload);
                 InputInjector.MoveRelative(dx, dy);
+                if (++_injMoves % 60 == 1) LinkLog.Write($"injecting mouse moves (count {_injMoves})");
                 break;
             case PacketType.MouseButton when _beingControlled:
                 var (btn, bdown) = Protocol.ReadMouseButton(payload);

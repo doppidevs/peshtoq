@@ -118,6 +118,8 @@ public partial class App : Application
         _link.ClipTextReceived += OnRemoteClipReceived;
         if (_island is not null) _island.Clipboard.TextCopied += OnLocalClipCopied;
 
+        Services.Link.LinkLog.Enabled = true; // diagnostic: writes %AppData%\Peshtoq\link.log
+        Services.Link.LinkLog.Write("=== Link started ===");
         _input = new InputController(_link);
         _input.ControllingChanged += _ => UpdateLinkIndicator();
         _input.BeingControlledChanged += _ => UpdateLinkIndicator();
