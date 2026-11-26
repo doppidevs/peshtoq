@@ -121,9 +121,15 @@ Hammasi TLS kanali ichida, pinlangan peer bilan.
 **Tavsiya:** 2a dan boshlaymiz — hotkey bilan, geometriyasiz. Ishonchli
 kill-switch va avto-chiqish bilan. Ishlagach, 2b (edge) qo'shiladi.
 
-## Ochiq qaror (2a dan oldin)
+## Tasdiqlangan qarorlar (2a)
 
-- Kill-switch chordi: `Ctrl+Alt+Break` (tavsiya) yoki boshqa?
-- Toggle chordi: nima bo'lsin (`Scroll Lock` ×2 / `Ctrl` ×2 / sozlanadigan)?
+| Nima | Tugma | Xatti-harakat |
+|---|---|---|
+| **Oddiy toggle** | `Scroll Lock` ×2 (tez) | Boshqaruvni peer'ga muloyim beradi / qaytaradi |
+| **Kill-switch (favqulodda)** | `Ctrl+Alt` ×3 (tez, birga) | Darhol uzadi, hooklarni olib tashlaydi. **Modal yo'q** |
 
-Bu ikkisi 2a kodidan oldin tasdiqlanadi.
+**Nega kill-switch'da modal yo'q:** favqulodda holatda sichqoncha qotgan bo'lishi
+mumkin — tasdiq oynasini bosib bo'lmaydi. Shuning uchun so'rovsiz, darhol uzadi;
+uzilgach bosishni talab qilmaydigan qisqa **toast** ("Boshqaruv uzildi") chiqadi.
+Kill-switch suppression'dan oldin tekshiriladi va hech qachon bloklanmaydi; u
+bu mashina Controller ham, Target ham bo'lsa — baribir boshqaruvni uzadi.
