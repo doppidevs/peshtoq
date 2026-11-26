@@ -27,6 +27,8 @@ public sealed class LinkService : IDisposable
     private TcpListener? _listener;
     private Discovery? _discovery;
     private LinkConnection? _active;
+    private string _activeInitHash = "";    // SPKI hash of the active connection's initiator
+    private readonly object _connLock = new();
 
     /// <summary>UI supplies this: show the SAS and return true if the user confirms the codes match.</summary>
     public Func<PairingPrompt, Task<bool>>? ConfirmPairing { get; set; }
@@ -80,8 +82,9 @@ public sealed class LinkService : IDisposable
     /// <summary>Drop the active peer connection, if any; the listener keeps running.</summary>
     public void Disconnect()
     {
-        _active?.Dispose();
-        _active = null;
+        LinkConnection? c;
+        lock (_connLock) { c = _active; _active = null; _activeInitHash = ""; }
+        c?.Dispose();
     }
 
     /// <summary>Send locally-copied clipboard text to the connected peer (fire-and-forget).</summary>
@@ -137,6 +140,8 @@ public sealed class LinkService : IDisposable
         {
             var conn = await LinkTransport.ConnectAsync(peer.Address.ToString(), peer.Port, _identity.Certificate, ct).ConfigureAwait(false);
             await HandleConnectionAsync(conn, incoming: false, ct).ConfigureAwait(false);
+            // If this attempt was dropped as a duplicate, don't leave the UI stuck on "Handshaking".
+            if (State == LinkState.Handshaking) Set(_active is not null ? LinkState.Connected : LinkState.Listening);
         }
         catch (Exception ex)
         {
@@ -147,6 +152,27 @@ public sealed class LinkService : IDisposable
 
     private async Task HandleConnectionAsync(LinkConnection conn, bool incoming, CancellationToken ct)
     {
+        // Admission control: at most one connection at a time. If two peers open links at once
+        // (or a button is double-clicked), both sides deterministically keep the one whose initiator
+        // has the smaller SPKI hash — so they converge on the same single connection instead of each
+        // disposing the other's (which surfaced as "I/O operation aborted").
+        string initHash = incoming ? conn.PeerSpkiHash : _identity.SpkiHash;
+        lock (_connLock)
+        {
+            if (_active is not null)
+            {
+                if (string.CompareOrdinal(initHash, _activeInitHash) >= 0)
+                {
+                    conn.Dispose(); // keep the existing connection; drop this duplicate quietly
+                    return;
+                }
+                _active.Dispose(); // this one wins; drop the older connection
+                _active = null;
+            }
+            _active = conn; // reserve the slot so a racing connection sees it
+            _activeInitHash = initHash;
+        }
+
         // Read the peer's Hello so we have a friendly name for the prompt.
         await Protocol.WriteFrameAsync(conn.Stream, PacketType.Hello, Protocol.HelloPayload(Environment.MachineName), ct).ConfigureAwait(false);
         var hello = await Protocol.ReadFrameAsync(conn.Stream, ct).ConfigureAwait(false);
@@ -161,6 +187,7 @@ public sealed class LinkService : IDisposable
             if (!ok)
             {
                 Log("Juftlash rad etildi");
+                lock (_connLock) { if (_active == conn) { _active = null; _activeInitHash = ""; } }
                 conn.Dispose();
                 Set(LinkState.Listening);
                 return;
@@ -174,8 +201,6 @@ public sealed class LinkService : IDisposable
             _paired.MarkSeen(conn.PeerSpkiHash);
         }
 
-        _active?.Dispose();
-        _active = conn;
         Set(LinkState.Connected);
         Log($"Ulandi: {peerName}");
         await RunConnection(conn, ct).ConfigureAwait(false);
@@ -188,21 +213,31 @@ public sealed class LinkService : IDisposable
         _sendChannel = channel;
         var beat = Task.Run(() => HeartbeatSender(conn, linked.Token), linked.Token);
         var pump = Task.Run(() => SendPump(conn, channel, linked.Token), linked.Token);
-        var last = DateTime.UtcNow;
+
+        // One reader only (SslStream forbids concurrent reads). A separate watchdog cancels the
+        // link if no frame — heartbeats included — arrives within PeerTimeout.
+        long lastTicks = DateTime.UtcNow.Ticks;
+        var watchdog = Task.Run(async () =>
+        {
+            while (!linked.IsCancellationRequested)
+            {
+                try { await Task.Delay(1000, linked.Token).ConfigureAwait(false); } catch { break; }
+                if (DateTime.UtcNow.Ticks - Volatile.Read(ref lastTicks) > PeerTimeout.Ticks)
+                {
+                    Log("Peer javob bermadi — uzildi");
+                    linked.Cancel();
+                    break;
+                }
+            }
+        }, linked.Token);
+
         try
         {
             while (!linked.IsCancellationRequested)
             {
-                var readTask = Protocol.ReadFrameAsync(conn.Stream, linked.Token);
-                var done = await Task.WhenAny(readTask, Task.Delay(PeerTimeout, linked.Token)).ConfigureAwait(false);
-                if (done != readTask)
-                {
-                    if (DateTime.UtcNow - last > PeerTimeout) { Log("Peer javob bermadi — uzildi"); break; }
-                    continue;
-                }
-                var frame = await readTask.ConfigureAwait(false);
+                var frame = await Protocol.ReadFrameAsync(conn.Stream, linked.Token).ConfigureAwait(false);
                 if (frame is null) { Log("Peer ulanishni yopdi"); break; }
-                last = DateTime.UtcNow;
+                Volatile.Write(ref lastTicks, DateTime.UtcNow.Ticks);
 
                 var (type, payload) = frame.Value;
                 switch (type)
@@ -223,14 +258,15 @@ public sealed class LinkService : IDisposable
                 }
             }
         }
-        catch (Exception ex) { Log($"Ulanish xatosi: {ex.Message}"); }
+        catch (OperationCanceledException) { /* torn down on purpose */ }
+        catch (Exception ex) { Log($"Ulanish uzildi: {ex.Message}"); }
         finally
         {
             linked.Cancel();
             channel.Writer.TryComplete();
             if (_sendChannel == channel) _sendChannel = null;
             conn.Dispose();
-            if (_active == conn) _active = null;
+            lock (_connLock) { if (_active == conn) { _active = null; _activeInitHash = ""; } }
             Set(LinkState.Listening);
         }
     }
